@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Forum</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Content will be dynamically loaded here -->
+        <div id="auth-container" class="container">
+            <!-- Login/Register forms will be loaded here -->
+        </div>
+        
+        <div id="main-container" class="container hidden">
+            <div id="post-detail-container" class="content-section hidden">
+                <div id="post-detail"></div>
+            </div>
+            <header>
+                <h1>Real-Time Forum</h1>
+                <div id="user-info"></div>
+                <button id="profile-btn" class="nav-btn">Profile</button>
+                <button id="logout-btn">Logout</button>
+                <nav>
+                    <button id="home-btn" class="nav-btn active">Home</button>
+                    <button id="create-post-btn" class="nav-btn">Create Post</button>
+                </nav>
+            </header>
+            
+            <div class="content-wrapper">
+                <div id="chat-sidebar">
+                    <h3>Online Users</h3>
+                    <div id="online-users-list"></div>
+                    <h3>Conversations</h3>
+                    <div id="conversations-list"></div>
+                </div>
+                
+                <div id="content-area">
+                    <div id="posts-container" class="content-section"></div>
+                    <div id="post-detail-container" class="content-section hidden"></div>
+                    <div id="create-post-container" class="content-section hidden">
+                        <h2>Create New Post</h2>
+                        <form id="create-post-form">
+                            <div class="form-group">
+                                <label for="post-title">Title</label>
+                                <input type="text" id="post-title" name="title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="post-category">Category</label>
+                                <select id="post-category" name="category" required>
+                                    <option value="">-- Select Category --</option>
+                                    <option value="general">General</option>
+                                    <option value="technology">Technology</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="movies">Movies</option>
+                                    <option value="music">Music</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="post-content">Content</label>
+                                <textarea id="post-content" name="content" rows="6" required></textarea>
+                            </div>
+                            <button type="submit">Create Post</button>
+                        </form>
+                    </div>
+                    <div id="chat-container" class="content-section hidden">
+                        <div id="chat-header"></div>
+                        <!-- Chat messages will be dynamically loaded here -->
+                    </div>
+                    <!-- Add this after the other content sections -->
+                    <div id="profile-container" class="content-section hidden">
+                        <h2>User Profile</h2>
+                        <div id="profile-content">
+                            <div class="profile-info">
+                                <div class="profile-avatar">
+                                    <img id="profile-avatar-img" src="/img/default-avatar.png" alt="Profile Avatar">
+                                    <form id="avatar-upload-form" class="hidden">
+                                        <input type="file" id="avatar-file" accept="image/*">
+                                        <button type="submit">Upload</button>
+                                    </form>
+                                    <button id="change-avatar-btn">Change Avatar</button>
+                                </div>
+                                <div class="profile-details">
+                                    <h3 id="profile-nickname"></h3>
+                                    <p><strong>Age:</strong> <span id="profile-age"></span></p>
+                                    <p><strong>Gender:</strong> <span id="profile-gender"></span></p>
+                                    <p><strong>Name:</strong> <span id="profile-name"></span></p>
+                                    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                                    <p><strong>Member since:</strong> <span id="profile-created"></span></p>
+                                </div>
+                            </div>
+                            <div class="profile-activity">
+                                <h3>Recent Activity</h3>
+                                <div class="profile-posts">
+                                    <h4>Posts</h4>
+                                    <div id="profile-posts-list"></div>
+                                </div>
+                                <div class="profile-comments">
+                                    <h4>Comments</h4>
+                                    <div id="profile-comments-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include JavaScript files -->
+    <script src="/js/logger.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/posts.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="/js/profile.js"></script>
+    <script src="/js/main.js"></script>
+</body>
+</html>

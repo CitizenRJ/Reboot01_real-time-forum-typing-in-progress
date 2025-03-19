@@ -94,6 +94,15 @@ function showRegisterForm(e) {
                 <div class="form-group">
                     <label for="registerPassword">Password</label>
                     <input type="password" id="registerPassword" name="password" required>
+                    <div class="password-criteria">
+                        <p>Password must:</p>
+                        <ul>
+                            <li>Be at least 8 characters long</li>
+                            <li>Contain at least one uppercase letter</li>
+                            <li>Contain at least one lowercase letter</li>
+                            <li>Contain at least one special character</li>
+                        </ul>
+                    </div>
                 </div>
                 <button type="submit">Register</button>
             </form>
@@ -105,7 +114,6 @@ function showRegisterForm(e) {
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('show-login-link').addEventListener('click', showLoginForm);
 }
-
 function handleLogin(e) {
     e.preventDefault();
     

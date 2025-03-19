@@ -468,4 +468,27 @@ nav {
     max-height: 100%;
     object-fit: contain;
 }
+/* Password criteria styling */
+.password-criteria {
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #666;
+    background-color: #f8f8f8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border-left: 3px solid #4CAF50;
+}
 
+.password-criteria p {
+    margin: 0 0 5px 0;
+    font-weight: bold;
+}
+
+.password-criteria ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.password-criteria li {
+    margin-bottom: 3px;
+}

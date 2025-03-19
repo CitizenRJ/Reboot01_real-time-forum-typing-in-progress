@@ -13,6 +13,12 @@ function throttle(func, limit) {
 }
 
 function initChat() {
+    // Check if user is logged in before initializing chat
+    if (!currentUser) {
+        console.log("User not logged in. Chat functionality disabled.");
+        return;
+    }
+    
     // Load online users
     loadOnlineUsers();
     
@@ -25,6 +31,9 @@ function initChat() {
 }
 
 function loadOnlineUsers() {
+    // Check if user is logged in
+    if (!currentUser) return;
+    
     fetch('/api/users/online')
         .then(response => response.json())
         .then(data => {
@@ -72,7 +81,11 @@ function displayOnlineUsers(onlineUserIds) {
         })
         .catch(error => console.error('Error loading users:', error));
 }
+
 function loadConversations() {
+    // Check if user is logged in
+    if (!currentUser) return;
+    
     fetch('/api/messages')
         .then(response => response.json())
         .then(data => {
@@ -118,6 +131,7 @@ function displayConversations(conversations, unreadCounts) {
         });
     });
 }
+
 function openChat(userId) {
     // Get user details
     fetch(`/api/users?id=${userId}`)
@@ -147,10 +161,6 @@ function openChat(userId) {
                     <div class="chat-messages" data-user-id="${userId}"></div>
                     <form id="chat-form" data-user-id="${userId}">
                         <input type="text" id="chat-input" placeholder="Type a message..." required>
-                        <label for="image-upload" class="image-upload-label">
-                            <img src="/img/image-icon.png" alt="Upload Image" title="Upload Image">
-                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
-                        </label>
                         <button type="submit">Send</button>
                     </form>
                 `;
@@ -174,29 +184,31 @@ function openChat(userId) {
             });
             
             document.getElementById('chat-form').addEventListener('submit', handleSendMessage);
-            
-            // Add event listener for image upload
-            document.getElementById('image-upload').addEventListener('change', function(e) {
-                handleImageUpload(e, userId);
-            });
         })
         .catch(error => console.error('Error loading user details:', error));
-}function loadMessages(userId, limit = 20, offset = 0) {
+}
+
+function loadMessages(userId, limit = 20, offset = 0) {
     fetch(`/api/messages?user=${userId}&limit=${limit}&offset=${offset}`)
         .then(response => response.json())
         .then(data => {
-            displayMessages(data.messages, userId);
+            // Ensure data.messages exists, default to empty array if not
+            displayMessages(data.messages || [], userId);
         })
         .catch(error => console.error('Error loading messages:', error));
 }
 
 function displayMessages(messages, userId) {
     const messagesContainer = document.querySelector(`.chat-messages[data-user-id="${userId}"]`);
+    if (!messagesContainer) return;
+    
     let html = '';
     
-    if (messages.length === 0) {
+    if (!messages || messages.length === 0) {
         html = '<p class="no-messages">No messages yet. Say hi!</p>';
     } else {
+        console.log("Messages to display:", messages); // Add this for debugging
+        
         // Sort messages by timestamp (oldest first)
         messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         
@@ -206,11 +218,7 @@ function displayMessages(messages, userId) {
             
             html += `
                 <div class="message ${isFromMe ? 'sent' : 'received'}">
-                    <div class="message-content">
-                        ${message.isImage 
-                            ? `<img src="/uploads/chat/${message.content}" class="chat-image" alt="Chat image">`
-                            : message.content}
-                    </div>
+                    <div class="message-content">${message.content || 'No content'}</div>
                     <div class="message-time">${time}</div>
                 </div>
             `;
@@ -219,27 +227,10 @@ function displayMessages(messages, userId) {
     
     messagesContainer.innerHTML = html;
     
-    // Add click event to enlarge images
-    messagesContainer.querySelectorAll('.chat-image').forEach(img => {
-        img.addEventListener('click', function() {
-            const modal = document.createElement('div');
-            modal.className = 'image-modal';
-            modal.innerHTML = `
-                <div class="image-modal-content">
-                    <img src="${this.src}" alt="Enlarged image">
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            modal.addEventListener('click', function() {
-                document.body.removeChild(modal);
-            });
-        });
-    });
-    
     // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
 function setupScrollListener(userId) {
     const messagesContainer = document.querySelector(`.chat-messages[data-user-id="${userId}"]`);
     if (!messagesContainer) return;
@@ -324,6 +315,7 @@ function setupScrollListener(userId) {
         messagesContainer.innerHTML = html + existingMessages;
     }
 }
+
 function handleSendMessage(e) {
     e.preventDefault();
     
@@ -331,127 +323,35 @@ function handleSendMessage(e) {
     const userId = parseInt(form.dataset.userId);
     const content = form.querySelector('#chat-input').value;
     
+    if (!content.trim()) return; // Don't send empty messages
+    
     // Send message via WebSocket
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
             type: 'chat_message',
-            receiver: userId,
-            content: content,
+            content: {
+                receiverId: userId,
+                content: content
+            }
         }));
         
         // Clear input
         form.querySelector('#chat-input').value = '';
+        
+        // Add the message to the UI immediately for better UX
+        const messagesContainer = document.querySelector(`.chat-messages[data-user-id="${userId}"]`);
+        if (messagesContainer) {
+            const time = new Date().toLocaleTimeString();
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message sent';
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${time}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     } else {
         alert('Connection lost. Please refresh the page.');
     }
-}
-    // Function to handle incoming messages via WebSocket
-    function handleIncomingMessage(message) {
-        // If chat with this user is currently open, add the message
-        const openChatUserId = document.querySelector('.chat-messages')?.dataset.userId;
-    
-        if (openChatUserId && 
-            (parseInt(openChatUserId) === message.senderId || parseInt(openChatUserId) === message.receiver)) {
-        
-            // Add the new message to the chat
-            const messagesContainer = document.querySelector(`.chat-messages[data-user-id="${openChatUserId}"]`);
-            const isFromMe = message.senderId === currentUser.id;
-            const time = new Date(message.timestamp).toLocaleTimeString();
-        
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isFromMe ? 'sent' : 'received'}`;
-            messageDiv.innerHTML = `
-                <div class="message-content">
-                    ${message.isImage 
-                        ? `<img src="/uploads/chat/${message.content}" class="chat-image" alt="Chat image">`
-                        : message.content}
-                </div>
-                <div class="message-time">${time}</div>
-            `;
-        
-            messagesContainer.appendChild(messageDiv);
-        
-            // Add click event to enlarge image if it's an image message
-            if (message.isImage) {
-                const img = messageDiv.querySelector('.chat-image');
-                img.addEventListener('click', function() {
-                    const modal = document.createElement('div');
-                    modal.className = 'image-modal';
-                    modal.innerHTML = `
-                        <div class="image-modal-content">
-                            <img src="${this.src}" alt="Enlarged image">
-                        </div>
-                    `;
-                    document.body.appendChild(modal);
-                
-                    modal.addEventListener('click', function() {
-                        document.body.removeChild(modal);
-                    });
-                });
-            }
-        
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    
-        // Refresh conversations list to show the new message
-        loadConversations();
-    }
-function handleImageUpload(e, userId) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Check if file is an image
-    if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-    }
-    
-    // Check file size (limit to 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
-        return;
-    }
-    
-    // Show loading indicator
-    const chatInput = document.getElementById('chat-input');
-    const originalPlaceholder = chatInput.placeholder;
-    chatInput.placeholder = 'Uploading image...';
-    chatInput.disabled = true;
-    
-    // Upload image
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('receiverId', userId);
-    
-    fetch('/api/messages/image', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Failed to upload image');
-        }
-    })
-    .then(data => {
-        // Reset file input
-        document.getElementById('image-upload').value = '';
-        
-        // Reset chat input
-        chatInput.placeholder = originalPlaceholder;
-        chatInput.disabled = false;
-        
-        // The server will broadcast the message via WebSocket,
-        // so we don't need to manually add it to the chat
-    })
-    .catch(error => {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image. Please try again.');
-        
-        // Reset chat input
-        chatInput.placeholder = originalPlaceholder;
-        chatInput.disabled = false;
-    });
 }

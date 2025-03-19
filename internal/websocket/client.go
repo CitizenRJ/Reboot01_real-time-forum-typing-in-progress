@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"RTF/internal/database"
 	"encoding/json"
 	"log"
 	"time"
@@ -121,8 +122,8 @@ func (c *Client) readPump() {
 		// Handle message based on type
 		switch wsMessage.Type {
 		case "chat_message":
-			// Process the message (route to appropriate handlers)
-			broadcast <- wsMessage
+			// Process and save the message
+			handleChatMessage(wsMessage)
 		}
 	}
 }
@@ -161,4 +162,26 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+// handleChatMessage processes and saves chat messages to the database
+func handleChatMessage(message Message) {
+	// Extract message content
+	if content, ok := message.Content.(map[string]interface{}); ok {
+		if receiverID, ok := content["receiverId"].(float64); ok {
+			if messageContent, ok := content["content"].(string); ok {
+				// Insert message directly into database without using is_image field
+				_, err := database.DB.Exec(
+					"INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
+					message.Sender, int(receiverID), messageContent,
+				)
+				if err != nil {
+					log.Printf("Error saving message to database: %v", err)
+				}
+			}
+		}
+	}
+
+	// Broadcast the message to clients
+	Broadcast(message)
 }

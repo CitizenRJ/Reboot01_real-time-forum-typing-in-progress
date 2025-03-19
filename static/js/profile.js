@@ -120,6 +120,42 @@ function displayProfileComments(comments) {
     });
 }
 
+// Add this function to crop the image to a square 200x200
+function cropImage(file, callback) {
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+        const img = new Image();
+        
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Determine the crop dimensions
+            let size = Math.min(img.width, img.height);
+            let x = (img.width - size) / 2;
+            let y = (img.height - size) / 2;
+            
+            // Set canvas dimensions
+            canvas.width = 200;
+            canvas.height = 200;
+            
+            // Crop the image
+            ctx.drawImage(img, x, y, size, size, 0, 0, canvas.width, canvas.height);
+            
+            // Convert canvas to Blob
+            canvas.toBlob(function(blob) {
+                callback(blob);
+            }, 'image/jpeg');
+        };
+        
+        img.src = event.target.result;
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Modify the uploadAvatar function to use the cropImage function
 function uploadAvatar() {
     const fileInput = document.getElementById('avatar-file');
     const file = fileInput.files[0];
@@ -129,35 +165,38 @@ function uploadAvatar() {
         return;
     }
     
-    const formData = new FormData();
-    formData.append('avatar', file);
-    
-    fetch('/api/users/avatar', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Failed to upload avatar');
-        }
-    })
-    .then(data => {
-        // Update avatar in UI
-        document.getElementById('profile-avatar-img').src = `/uploads/avatars/${data.avatar}`;
+    // Crop the image before uploading
+    cropImage(file, function(blob) {
+        const formData = new FormData();
+        formData.append('avatar', blob, 'avatar.jpg'); // Give it a fixed name
         
-        // Hide upload form and show change button
-        document.getElementById('avatar-upload-form').classList.add('hidden');
-        document.getElementById('change-avatar-btn').classList.remove('hidden');
-        
-        // Update current user object
-        currentUser.avatar = data.avatar;
-        
-        alert('Avatar uploaded successfully');
-    })
-    .catch(error => {
-        console.error('Error uploading avatar:', error);
-        alert('Failed to upload avatar. Please try again.');
+        fetch('/api/users/avatar', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to upload avatar');
+            }
+        })
+        .then(data => {
+            // Update avatar in UI
+            document.getElementById('profile-avatar-img').src = `/uploads/avatars/${data.avatar}`;
+            
+            // Hide upload form and show change button
+            document.getElementById('avatar-upload-form').classList.add('hidden');
+            document.getElementById('change-avatar-btn').classList.remove('hidden');
+            
+            // Update current user object
+            currentUser.avatar = data.avatar;
+            
+            alert('Avatar uploaded successfully');
+        })
+        .catch(error => {
+            console.error('Error uploading avatar:', error);
+            alert('Failed to upload avatar. Please try again.');
+        });
     });
 }

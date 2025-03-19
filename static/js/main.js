@@ -48,6 +48,9 @@ function showSection(sectionId) {
 
 // Initialize WebSocket connection
 function initWebSocket() {
+    // Add this check
+    if (!currentUser) return;
+    
     socket = new WebSocket(`ws://${window.location.host}/ws`);
     
     socket.onopen = function() {
@@ -99,4 +102,49 @@ function initWebSocket() {
     socket.onerror = function(error) {
         console.error('WebSocket error:', error);
     };
+}
+function handleIncomingMessage(message) {
+    console.log("Received message:", message);
+    
+    // Extract message details
+    let receiverId, content, senderId;
+    
+    if (message.content && typeof message.content === 'object') {
+        receiverId = message.content.receiverId;
+        content = message.content.content;
+        senderId = message.sender;
+    } else {
+        console.error("Invalid message format:", message);
+        return;
+    }
+    
+    // If chat with this user is currently open, add the message
+    const openChatUserId = document.querySelector('.chat-messages')?.dataset.userId;
+    
+    if (openChatUserId && 
+        (parseInt(openChatUserId) === senderId || parseInt(openChatUserId) === receiverId)) {
+        
+        // Only add the message to the UI if it's from the other user, not from ourselves
+        // This prevents duplicate messages since we already add our own messages in handleSendMessage
+        if (senderId !== currentUser.id) {
+            // Add the new message to the chat
+            const messagesContainer = document.querySelector(`.chat-messages[data-user-id="${openChatUserId}"]`);
+            const time = new Date(message.timestamp).toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message received';
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+    
+    // Refresh conversations list to show the new message
+    loadConversations();
 }

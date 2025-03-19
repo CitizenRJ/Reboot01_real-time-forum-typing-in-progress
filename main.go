@@ -41,7 +41,6 @@ func main() {
 
 	// Add these new routes
 	http.HandleFunc("/api/users/avatar", handlers.HandleUserAvatar)
-	http.HandleFunc("/api/messages/image", handlers.HandleImageMessage)
 
 	// Start server
 	log.Println("Server starting on http://localhost:8080")

@@ -4,11 +4,8 @@ package websocket
 func Initialize() {
 	// Start the hub process
 	go func() {
-		for {
-			select {
-			case message := <-broadcast:
-				Broadcast(message)
-			}
+		for message := range broadcast {
+			Broadcast(message)
 		}
 	}()
 }

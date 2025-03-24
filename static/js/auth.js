@@ -188,24 +188,46 @@ function handleRegister(e) {
 }
 
 function logout() {
-    fetch('/api/logout', {
-        method: 'POST',
-    })
-    .then(response => {
-        if (response.ok) {
-            currentUser = null;
-            if (socket) {
-                socket.close();
-                socket = null;
+    // First, clear local state regardless of server response
+    const wasLoggedIn = currentUser !== null;
+    currentUser = null;
+    
+    // Clear intervals
+    if (onlineUsersInterval) {
+        clearInterval(onlineUsersInterval);
+        onlineUsersInterval = null;
+    }
+    
+    if (conversationsInterval) {
+        clearInterval(conversationsInterval);
+        conversationsInterval = null;
+    }
+    
+    // Close WebSocket
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+    
+    // Update UI immediately
+    document.getElementById('main-container').classList.add('hidden');
+    document.getElementById('auth-container').classList.remove('hidden');
+    showLoginForm();
+    
+    // Only attempt server logout if we were logged in
+    if (wasLoggedIn) {
+        fetch('/api/logout', {
+            method: 'POST',
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.warn('Server logout failed, but local state was cleared');
             }
-            document.getElementById('main-container').classList.add('hidden');
-            document.getElementById('auth-container').classList.remove('hidden');
-            showLoginForm();
-        } else {
-            throw new Error('Logout failed');
-        }
-    })
-    .catch(error => console.error('Logout error:', error));
+        })
+        .catch(error => {
+            console.error('Logout error:', error);
+        });
+    }
 }
 
 function showMainContent() {

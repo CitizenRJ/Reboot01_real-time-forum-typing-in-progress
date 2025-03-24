@@ -14,6 +14,10 @@ func Broadcast(message Message) {
 		return
 	}
 
+	// Use mutex to protect access to the clients map
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+
 	// Send to all clients
 	for client := range clients {
 		// For chat messages, only send to the sender and recipient
@@ -33,7 +37,10 @@ func Broadcast(message Message) {
 			// Client buffer is full or disconnected
 			close(client.send)
 			delete(clients, client)
+
+			onlineUsersMutex.Lock()
 			delete(onlineUsers, client.userID)
+			onlineUsersMutex.Unlock()
 		}
 	}
 }

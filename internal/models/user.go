@@ -84,13 +84,20 @@ func AuthenticateUser(login, password string) (*User, error) {
 }
 
 func CreateSession(userID int) (*Session, error) {
+	// First, delete any existing sessions for this user
+	_, err := database.DB.Exec("DELETE FROM sessions WHERE user_id = ?", userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Then create a new session as before
 	uuid, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
 	}
 
 	sessionID := uuid.String()
-	expiresAt := time.Now().Add(24 * time.Hour) // Set expiration to 24 hours from now
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 
 	_, err = database.DB.Exec("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)",
 		sessionID, userID, expiresAt)

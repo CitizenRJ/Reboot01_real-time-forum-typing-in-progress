@@ -4,9 +4,10 @@ import (
 	"RTF/internal/database"
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
+	gorillaWs "github.com/gorilla/websocket"
 )
 
 const (
@@ -25,10 +26,14 @@ const (
 
 // Client represents a single websocket connection
 type Client struct {
-	conn   *websocket.Conn
+	conn   *gorillaWs.Conn
 	send   chan []byte
 	userID int
 }
+
+// Add mutexes to protect the maps
+var clientsMutex sync.Mutex
+var onlineUsersMutex sync.Mutex
 
 // Map of all connected clients
 var clients = make(map[*Client]bool)
@@ -41,6 +46,9 @@ var onlineUsers = make(map[int]bool)
 
 // GetOnlineUsers returns a list of online user IDs
 func GetOnlineUsers() []int {
+	onlineUsersMutex.Lock()
+	defer onlineUsersMutex.Unlock()
+
 	var users []int
 	for userID := range onlineUsers {
 		users = append(users, userID)
@@ -49,39 +57,51 @@ func GetOnlineUsers() []int {
 }
 
 // HandleConnections manages WebSocket connections
-func HandleConnections(conn *websocket.Conn, userID int) {
+func HandleConnections(conn *gorillaWs.Conn, userID int) {
+	// Disconnect any existing connection for this user
+	DisconnectUser(userID)
+
+	// Create a new client
 	client := &Client{
 		conn:   conn,
 		send:   make(chan []byte, 256),
 		userID: userID,
 	}
 
-	// Register client
+	// Register this client with mutex protection
+	clientsMutex.Lock()
 	clients[client] = true
+	clientsMutex.Unlock()
 
-	// Update online users
+	onlineUsersMutex.Lock()
 	onlineUsers[userID] = true
-
-	// Broadcast user online status
-	Broadcast(Message{
-		Type: "user_online",
-		Content: map[string]interface{}{
-			"userId": userID,
-		},
-	})
+	onlineUsersMutex.Unlock()
 
 	// Start goroutines for reading and writing
 	go client.readPump()
 	go client.writePump()
+
+	// Broadcast user online status
+	broadcast <- Message{
+		Type:      "user_online",
+		Content:   userID,
+		Timestamp: time.Now(),
+	}
 }
 
 // readPump pumps messages from the WebSocket connection to the hub
 func (c *Client) readPump() {
 	defer func() {
-		// Clean up on disconnect
+		// Clean up on disconnect with mutex protection
 		c.conn.Close()
+
+		clientsMutex.Lock()
 		delete(clients, c)
+		clientsMutex.Unlock()
+
+		onlineUsersMutex.Lock()
 		delete(onlineUsers, c.userID)
+		onlineUsersMutex.Unlock()
 
 		// Broadcast user offline status
 		Broadcast(Message{
@@ -102,7 +122,7 @@ func (c *Client) readPump() {
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if gorillaWs.IsUnexpectedCloseError(err, gorillaWs.CloseGoingAway, gorillaWs.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
@@ -142,11 +162,11 @@ func (c *Client) writePump() {
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.WriteMessage(gorillaWs.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.conn.NextWriter(gorillaWs.TextMessage)
 			if err != nil {
 				return
 			}
@@ -157,7 +177,7 @@ func (c *Client) writePump() {
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := c.conn.WriteMessage(gorillaWs.PingMessage, nil); err != nil {
 				return
 			}
 		}
@@ -184,4 +204,25 @@ func handleChatMessage(message Message) {
 
 	// Broadcast the message to clients
 	Broadcast(message)
+}
+
+// Add this to the websocket package
+func DisconnectUser(userID int) {
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+
+	for client := range clients {
+		if client.userID == userID {
+			// Close the connection
+			client.conn.Close()
+			// Remove from clients map
+			delete(clients, client)
+
+			// Remove from online users if no other connections exist
+			onlineUsersMutex.Lock()
+			delete(onlineUsers, userID)
+			onlineUsersMutex.Unlock()
+			break
+		}
+	}
 }

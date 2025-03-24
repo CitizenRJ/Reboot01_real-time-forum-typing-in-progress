@@ -2,21 +2,33 @@
 function loadPosts() {
     console.log('Loading posts...');
     
+    // Check if user is logged in
+    if (!currentUser) {
+        console.log('User not logged in, cannot load posts');
+        return;
+    }
+    
     fetch('/api/posts')
         .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Session expired
+                    handleSessionExpired();
+                    throw new Error('Session expired');
+                }
                 throw new Error(`Failed to load posts: ${response.status}`);
             }
+            return response.json();
         })
         .then(data => {
             console.log(`Received ${data.posts ? data.posts.length : 0} posts`);
             displayPosts(data.posts || []);
         })
         .catch(error => {
-            console.error('Error loading posts:', error);
-            alert('Failed to load posts. Please try again.');
+            if (error.message !== 'Session expired') {
+                console.error('Error loading posts:', error);
+                alert('Failed to load posts. Please try again.');
+            }
         });
 }
 

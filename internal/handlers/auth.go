@@ -223,19 +223,16 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
+		// If no cookie, just return success - they're already logged out
 		log.Printf("No session cookie found: %v", err)
-		http.Error(w, "No session found", http.StatusBadRequest)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{"message": "Already logged out"})
 		return
 	}
 	log.Printf("Found session cookie: %s", cookie.Value)
 
-	// Delete session from database
-	err = models.DeleteSession(cookie.Value)
-	if err != nil {
-		log.Printf("Failed to delete session %s: %v", cookie.Value, err)
-		http.Error(w, "Failed to delete session", http.StatusInternalServerError)
-		return
-	}
+	// Delete session from database - ignore errors
+	_ = models.DeleteSession(cookie.Value)
 	log.Printf("Session deleted: %s", cookie.Value)
 
 	// Clear cookie

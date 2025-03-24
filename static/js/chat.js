@@ -25,9 +25,18 @@ function initChat() {
     // Load conversations
     loadConversations();
     
+    // Clear existing intervals if any
+    if (onlineUsersInterval) {
+        clearInterval(onlineUsersInterval);
+    }
+    
+    if (conversationsInterval) {
+        clearInterval(conversationsInterval);
+    }
+    
     // Update chat periodically
-    setInterval(loadOnlineUsers, 30000); // Every 30 seconds
-    setInterval(loadConversations, 30000); // Every 30 seconds
+    onlineUsersInterval = setInterval(loadOnlineUsers, 30000); // Every 30 seconds
+    conversationsInterval = setInterval(loadConversations, 30000); // Every 30 seconds
 }
 
 function loadOnlineUsers() {
@@ -35,11 +44,25 @@ function loadOnlineUsers() {
     if (!currentUser) return;
     
     fetch('/api/users/online')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Session expired
+                    handleSessionExpired();
+                    throw new Error('Session expired');
+                }
+                throw new Error(`Failed to load online users: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             displayOnlineUsers(data.onlineUsers);
         })
-        .catch(error => console.error('Error loading online users:', error));
+        .catch(error => {
+            if (error.message !== 'Session expired') {
+                console.error('Error loading online users:', error);
+            }
+        });
 }
 
 function displayOnlineUsers(onlineUserIds) {

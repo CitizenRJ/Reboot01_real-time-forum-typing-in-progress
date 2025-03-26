@@ -2,7 +2,6 @@ package models
 
 import (
 	"RTF/internal/database"
-	"log"
 	"time"
 )
 
@@ -17,30 +16,23 @@ type Post struct {
 }
 
 func CreatePost(post Post) (int, error) {
-	log.Printf("Creating post in database: %+v", post)
-
 	result, err := database.DB.Exec(
 		"INSERT INTO posts (user_id, title, content, category) VALUES (?, ?, ?, ?)",
 		post.UserID, post.Title, post.Content, post.Category,
 	)
 	if err != nil {
-		log.Printf("Database insert error: %v", err)
 		return 0, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		log.Printf("Error getting last insert ID: %v", err)
 		return 0, err
 	}
 
-	log.Printf("Post created in database with ID: %d", id)
 	return int(id), nil
 }
 
 func GetAllPosts() ([]Post, error) {
-	log.Printf("Fetching all posts")
-
 	rows, err := database.DB.Query(`
 		SELECT p.id, p.user_id, p.title, p.content, p.category, p.created_at, 
 		       u.id, u.nickname, u.email
@@ -49,7 +41,6 @@ func GetAllPosts() ([]Post, error) {
 		ORDER BY p.created_at DESC
 	`)
 	if err != nil {
-		log.Printf("Database query error: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -64,7 +55,6 @@ func GetAllPosts() ([]Post, error) {
 			&user.ID, &user.Nickname, &user.Email,
 		)
 		if err != nil {
-			log.Printf("Error scanning row: %v", err)
 			return nil, err
 		}
 
@@ -72,13 +62,10 @@ func GetAllPosts() ([]Post, error) {
 		posts = append(posts, post)
 	}
 
-	log.Printf("Fetched %d posts", len(posts))
 	return posts, nil
 }
 
 func GetPostByID(id int) (Post, error) {
-	log.Printf("Fetching post with ID: %d", id)
-
 	var post Post
 	var user User
 
@@ -94,12 +81,10 @@ func GetPostByID(id int) (Post, error) {
 	)
 
 	if err != nil {
-		log.Printf("Database query error: %v", err)
 		return Post{}, err
 	}
 
 	post.User = &user
-	log.Printf("Fetched post: %+v", post)
 	return post, nil
 }
 

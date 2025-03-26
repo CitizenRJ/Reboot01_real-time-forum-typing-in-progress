@@ -2,17 +2,17 @@ package handlers
 
 import (
 	"RTF/internal/models"
-	ws "RTF/internal/websocket" // Rename to avoid confusion
+	ws "RTF/internal/websocket"
 	"net/http"
 
-	gorillaWs "github.com/gorilla/websocket" // Use alias for clarity
+	gorillaWs "github.com/gorilla/websocket"
 )
 
 var upgrader = gorillaWs.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all connections
+		return true
 	},
 }
 
@@ -29,13 +29,11 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Upgrade HTTP connection to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
 		return
 	}
 
-	// Handle WebSocket connection
 	ws.HandleConnections(conn, user.ID)
 }

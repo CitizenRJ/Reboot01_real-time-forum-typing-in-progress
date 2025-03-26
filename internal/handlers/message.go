@@ -27,14 +27,12 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 
 	otherUserID, err := strconv.Atoi(r.URL.Query().Get("user"))
 	if err != nil || otherUserID == 0 {
-		// If no specific user requested, return the list of conversations
 		conversations, err := models.GetLastMessageWithEachUser(user.ID)
 		if err != nil {
 			http.Error(w, "Failed to get conversations", http.StatusInternalServerError)
 			return
 		}
 
-		// Get unread counts for each conversation
 		unreadCounts, err := models.GetUnreadMessageCount(user.ID)
 		if err != nil {
 			http.Error(w, "Failed to get unread counts", http.StatusInternalServerError)
@@ -49,7 +47,6 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get limit and offset for pagination
 	limit := 10
 	offset := 0
 
@@ -63,14 +60,12 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 		offset, _ = strconv.Atoi(offsetStr)
 	}
 
-	// Get messages between users
 	messages, err := models.GetMessagesBetweenUsers(user.ID, otherUserID, limit, offset)
 	if err != nil {
 		http.Error(w, "Failed to get messages", http.StatusInternalServerError)
 		return
 	}
 
-	// Mark messages as read
 	err = models.MarkMessagesAsRead(otherUserID, user.ID)
 	if err != nil {
 		http.Error(w, "Failed to mark messages as read", http.StatusInternalServerError)

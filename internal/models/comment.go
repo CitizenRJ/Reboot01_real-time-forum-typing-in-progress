@@ -28,7 +28,6 @@ func CreateComment(comment Comment) (int, error) {
 }
 
 func GetCommentsByPostID(postID int) ([]Comment, error) {
-	// Query the database for comments related to the post
 	rows, err := database.DB.Query("SELECT id, post_id, user_id, content, created_at FROM comments WHERE post_id = ?", postID)
 	if err != nil {
 		return nil, err
@@ -43,7 +42,6 @@ func GetCommentsByPostID(postID int) ([]Comment, error) {
 			return nil, err
 		}
 
-		// Fetch the username for each comment
 		var username string
 		err = database.DB.QueryRow("SELECT nickname FROM users WHERE id = ?", comment.UserID).Scan(&username)
 		if err == nil {

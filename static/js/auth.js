@@ -49,7 +49,6 @@ function showLoginForm() {
         </div>
     `;
 
-    // Add event listeners
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('show-register-link').addEventListener('click', showRegisterForm);
 }
@@ -110,7 +109,6 @@ function showRegisterForm(e) {
         </div>
     `;
 
-    // Add event listeners
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('show-login-link').addEventListener('click', showLoginForm);
 }
@@ -188,11 +186,9 @@ function handleRegister(e) {
 }
 
 function logout() {
-    // First, clear local state regardless of server response
     const wasLoggedIn = currentUser !== null;
     currentUser = null;
     
-    // Clear intervals
     if (onlineUsersInterval) {
         clearInterval(onlineUsersInterval);
         onlineUsersInterval = null;
@@ -203,18 +199,15 @@ function logout() {
         conversationsInterval = null;
     }
     
-    // Close WebSocket
     if (socket) {
         socket.close();
         socket = null;
     }
     
-    // Update UI immediately
     document.getElementById('main-container').classList.add('hidden');
     document.getElementById('auth-container').classList.remove('hidden');
     showLoginForm();
     
-    // Only attempt server logout if we were logged in
     if (wasLoggedIn) {
         fetch('/api/logout', {
             method: 'POST',
@@ -236,7 +229,6 @@ function showMainContent() {
     document.getElementById('auth-container').classList.add('hidden');
     document.getElementById('main-container').classList.remove('hidden');
     
-    // Update user info in header
     const userInfo = document.getElementById('user-info');
     if (userInfo) {
         userInfo.innerHTML = `
@@ -244,7 +236,6 @@ function showMainContent() {
         `;
     }
 
-    // Initialize event listeners for main content
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
@@ -265,7 +256,6 @@ function showMainContent() {
         });
     }
     
-    // Initialize create post form
     const createPostForm = document.getElementById('create-post-form');
     if (createPostForm) {
         createPostForm.addEventListener('submit', handleCreatePost);

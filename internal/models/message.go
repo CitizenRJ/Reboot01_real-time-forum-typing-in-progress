@@ -35,7 +35,7 @@ func GetMessagesBetweenUsers(userID1, userID2 int, limit, offset int) ([]Message
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 		WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
-		ORDER BY m.created_at DESC
+		ORDER BY m.created_at ASC
 		LIMIT ? OFFSET ?
 	`, userID1, userID2, userID2, userID1, limit, offset)
 	if err != nil {
@@ -68,7 +68,6 @@ func MarkMessagesAsRead(senderID, receiverID int) error {
 }
 
 func GetLastMessageWithEachUser(userID int) ([]Message, error) {
-	// Get the most recent message for each conversation
 	rows, err := database.DB.Query(`
 		SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at, m.read, 
 		   CASE 
@@ -136,12 +135,10 @@ func GetUnreadMessageCount(receiverID int) (map[int]int, error) {
 	return unreadCounts, nil
 }
 
-// GetMessageByID retrieves a message by its ID
 func GetMessageByID(id int) (*Message, error) {
 	var message Message
 	var senderID int
 
-	// Query the message
 	err := database.DB.QueryRow(`
         SELECT id, sender_id, receiver_id, content, created_at, read, is_image
         FROM messages
@@ -154,7 +151,6 @@ func GetMessageByID(id int) (*Message, error) {
 
 	message.SenderID = senderID
 
-	// Get sender's name
 	sender, err := GetUserByID(senderID)
 	if err == nil {
 		message.SenderName = sender.Nickname

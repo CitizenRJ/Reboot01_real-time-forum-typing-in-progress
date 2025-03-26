@@ -1,6 +1,4 @@
-// Profile functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Add event listener for profile button
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) {
         profileBtn.addEventListener('click', () => {
@@ -9,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add event listener for avatar change button
     const changeAvatarBtn = document.getElementById('change-avatar-btn');
     if (changeAvatarBtn) {
         changeAvatarBtn.addEventListener('click', () => {
@@ -18,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add event listener for avatar upload form
     const avatarUploadForm = document.getElementById('avatar-upload-form');
     if (avatarUploadForm) {
         avatarUploadForm.addEventListener('submit', function(e) {
@@ -31,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadUserProfile() {
     if (!currentUser) return;
     
-    // Display user information
     document.getElementById('profile-nickname').textContent = currentUser.nickname;
     document.getElementById('profile-age').textContent = currentUser.age;
     document.getElementById('profile-gender').textContent = currentUser.gender;
@@ -39,12 +34,10 @@ function loadUserProfile() {
     document.getElementById('profile-email').textContent = currentUser.email;
     document.getElementById('profile-created').textContent = new Date(currentUser.createdAt).toLocaleDateString();
     
-    // Load user's avatar if exists
     if (currentUser.avatar) {
         document.getElementById('profile-avatar-img').src = `/uploads/avatars/${currentUser.avatar}`;
     }
     
-    // Load user's posts
     fetch(`/api/posts?userId=${currentUser.id}`)
         .then(response => response.json())
         .then(data => {
@@ -52,7 +45,6 @@ function loadUserProfile() {
         })
         .catch(error => console.error('Error loading user posts:', error));
     
-    // Load user's comments
     fetch(`/api/comments?userId=${currentUser.id}`)
         .then(response => response.json())
         .then(data => {
@@ -70,7 +62,7 @@ function displayProfilePosts(posts) {
     }
     
     let html = '';
-    posts.slice(0, 5).forEach(post => { // Show only the 5 most recent posts
+    posts.slice(0, 5).forEach(post => {
         html += `
             <div class="profile-post-item">
                 <h5>${post.title}</h5>
@@ -83,7 +75,6 @@ function displayProfilePosts(posts) {
     
     postsContainer.innerHTML = html;
     
-    // Add event listeners to view post buttons
     postsContainer.querySelectorAll('.view-post-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             viewPost(parseInt(btn.dataset.id));
@@ -100,7 +91,7 @@ function displayProfileComments(comments) {
     }
     
     let html = '';
-    comments.slice(0, 5).forEach(comment => { // Show only the 5 most recent comments
+    comments.slice(0, 5).forEach(comment => {
         html += `
             <div class="profile-comment-item">
                 <p>${comment.content.substring(0, 100)}${comment.content.length > 100 ? '...' : ''}</p>
@@ -112,7 +103,6 @@ function displayProfileComments(comments) {
     
     commentsContainer.innerHTML = html;
     
-    // Add event listeners to view post buttons
     commentsContainer.querySelectorAll('.view-post-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             viewPost(parseInt(btn.dataset.id));
@@ -120,7 +110,6 @@ function displayProfileComments(comments) {
     });
 }
 
-// Add this function to crop the image to a square 200x200
 function cropImage(file, callback) {
     const reader = new FileReader();
     
@@ -131,19 +120,15 @@ function cropImage(file, callback) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            // Determine the crop dimensions
             let size = Math.min(img.width, img.height);
             let x = (img.width - size) / 2;
             let y = (img.height - size) / 2;
             
-            // Set canvas dimensions
             canvas.width = 200;
             canvas.height = 200;
             
-            // Crop the image
             ctx.drawImage(img, x, y, size, size, 0, 0, canvas.width, canvas.height);
             
-            // Convert canvas to Blob
             canvas.toBlob(function(blob) {
                 callback(blob);
             }, 'image/jpeg');
@@ -155,7 +140,6 @@ function cropImage(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// Modify the uploadAvatar function to use the cropImage function
 function uploadAvatar() {
     const fileInput = document.getElementById('avatar-file');
     const file = fileInput.files[0];
@@ -165,10 +149,9 @@ function uploadAvatar() {
         return;
     }
     
-    // Crop the image before uploading
     cropImage(file, function(blob) {
         const formData = new FormData();
-        formData.append('avatar', blob, 'avatar.jpg'); // Give it a fixed name
+        formData.append('avatar', blob, 'avatar.jpg');
         
         fetch('/api/users/avatar', {
             method: 'POST',
@@ -182,14 +165,11 @@ function uploadAvatar() {
             }
         })
         .then(data => {
-            // Update avatar in UI
             document.getElementById('profile-avatar-img').src = `/uploads/avatars/${data.avatar}`;
             
-            // Hide upload form and show change button
             document.getElementById('avatar-upload-form').classList.add('hidden');
             document.getElementById('change-avatar-btn').classList.remove('hidden');
             
-            // Update current user object
             currentUser.avatar = data.avatar;
             
             alert('Avatar uploaded successfully');

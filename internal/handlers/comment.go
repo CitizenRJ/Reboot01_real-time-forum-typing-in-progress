@@ -40,18 +40,15 @@ func HandleComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the post that was commented on
 	post, err := models.GetPostByID(comment.PostID)
 	if err != nil {
 		http.Error(w, "Failed to get post", http.StatusInternalServerError)
 		return
 	}
 
-	// Add username to comment
 	comment.ID = commentID
 	comment.Username = user.Nickname
 
-	// Notify all clients about the new comment
 	websocket.Broadcast(websocket.Message{
 		Type: "new_comment",
 		Content: map[string]interface{}{

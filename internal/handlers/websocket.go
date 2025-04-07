@@ -3,6 +3,7 @@ package handlers
 import (
 	"RTF/internal/models"
 	ws "RTF/internal/websocket"
+	"log"
 	"net/http"
 
 	gorillaWs "github.com/gorilla/websocket"
@@ -19,21 +20,25 @@ var upgrader = gorillaWs.Upgrader{
 func ServeWs(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		log.Printf("Unauthorized WebSocket connection attempt: %v", err)
+		http.Error(w, "Unauthorized: No session cookie found", http.StatusUnauthorized)
 		return
 	}
 
 	user, err := models.GetUserBySessionID(cookie.Value)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		log.Printf("Unauthorized WebSocket connection attempt with invalid session: %v", err)
+		http.Error(w, "Unauthorized: Invalid session", http.StatusUnauthorized)
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+		log.Printf("Failed to upgrade connection to WebSocket for user %d: %v", user.ID, err)
+		http.Error(w, "Could not establish WebSocket connection", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("WebSocket connection established for user %d from %s", user.ID, r.RemoteAddr)
 	ws.HandleConnections(conn, user.ID)
 }

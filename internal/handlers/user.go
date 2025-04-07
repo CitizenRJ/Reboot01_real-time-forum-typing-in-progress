@@ -35,9 +35,32 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	onlineUserIDs := websocket.GetOnlineUsers()
+
+	onlineMap := make(map[int]bool)
+	for _, id := range onlineUserIDs {
+		onlineMap[id] = true
+	}
+
+	var usersWithStatus []map[string]interface{}
+	for _, user := range users {
+		userData := map[string]interface{}{
+			"id":        user.ID,
+			"nickname":  user.Nickname,
+			"age":       user.Age,
+			"gender":    user.Gender,
+			"firstName": user.FirstName,
+			"lastName":  user.LastName,
+			"email":     user.Email,
+			"createdAt": user.CreatedAt,
+			"isOnline":  onlineMap[user.ID],
+		}
+		usersWithStatus = append(usersWithStatus, userData)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"users": users,
+		"users": usersWithStatus,
 	})
 }
 

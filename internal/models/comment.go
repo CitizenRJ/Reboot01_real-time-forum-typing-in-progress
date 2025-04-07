@@ -53,3 +53,33 @@ func GetCommentsByPostID(postID int) ([]Comment, error) {
 
 	return comments, nil
 }
+
+func GetCommentsByUserID(userID int) ([]Comment, error) {
+	rows, err := database.DB.Query(`
+        SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, p.title 
+        FROM comments c
+        JOIN posts p ON c.post_id = p.id
+        WHERE c.user_id = ?
+        ORDER BY c.created_at DESC
+    `, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var comments []Comment
+	for rows.Next() {
+		var comment Comment
+		var postTitle string
+		err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &postTitle)
+		if err != nil {
+			return nil, err
+		}
+
+		comment.Username = postTitle
+
+		comments = append(comments, comment)
+	}
+
+	return comments, nil
+}

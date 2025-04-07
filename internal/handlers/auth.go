@@ -4,9 +4,18 @@ import (
 	"RTF/internal/models"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 	"unicode"
+)
+
+var (
+	loginAttempts = make(map[string]int)
+	loginMutex    sync.Mutex
+	maxAttempts   = 5
 )
 
 func isValidPassword(password string) (bool, string) {
@@ -131,9 +140,22 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	loginMutex.Lock()
+	ipAddr := r.RemoteAddr
+	attempts := loginAttempts[ipAddr]
+	if attempts >= maxAttempts {
+		loginMutex.Unlock()
+		http.Error(w, "Too many failed attempts, please try again later", http.StatusTooManyRequests)
+		return
+	}
+	loginMutex.Unlock()
+
 	user, err := models.AuthenticateUser(credentials.Login, credentials.Password)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		loginMutex.Lock()
+		loginAttempts[ipAddr]++
+		loginMutex.Unlock()
+		http.Error(w, "Authentication failed", http.StatusUnauthorized)
 		return
 	}
 
@@ -169,7 +191,9 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = models.DeleteSession(cookie.Value)
+	if err := models.DeleteSession(cookie.Value); err != nil {
+		log.Printf("Error deleting session: %v", err)
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
@@ -200,6 +224,24 @@ func CheckSession(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return
+	}
+
+	lastRotation, _ := strconv.ParseInt(r.URL.Query().Get("last_rotation"), 10, 64)
+	if lastRotation == 0 || time.Since(time.Unix(lastRotation, 0)) > 12*time.Hour {
+		if err := models.DeleteSession(cookie.Value); err != nil {
+			log.Printf("Error deleting old session: %v", err)
+		}
+
+		newSession, err := models.CreateSession(user.ID)
+		if err == nil {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session_id",
+				Value:    newSession.ID,
+				Path:     "/",
+				Expires:  time.Now().Add(24 * time.Hour),
+				HttpOnly: true,
+			})
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

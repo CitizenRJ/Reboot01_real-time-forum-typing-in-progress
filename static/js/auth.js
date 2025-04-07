@@ -1,24 +1,19 @@
-function checkSession() {
+function checkSession(callback) {
     console.log('Checking user session');
     
-    fetch('/api/session')
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                showLoginForm();
-                throw new Error('Not logged in');
-            }
-        })
+    return api.get('/api/session')
         .then(data => {
             console.log('User session found:', data.user.nickname);
             currentUser = data.user;
-            showMainContent();
-            initWebSocket();
-            loadPosts();
+            if (callback) callback(data.user);
+            return data.user;
         })
         .catch(error => {
             console.error('Session check failed:', error);
+            if (error.message !== 'Session expired') {
+                showLoginForm();
+            }
+            return null;
         });
 }
 
@@ -112,6 +107,7 @@ function showRegisterForm(e) {
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('show-login-link').addEventListener('click', showLoginForm);
 }
+
 function handleLogin(e) {
     e.preventDefault();
     
@@ -119,30 +115,20 @@ function handleLogin(e) {
     const login = form.login.value;
     const password = form.password.value;
 
-    fetch('/api/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ login, password }),
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Login failed');
-        }
-    })
-    .then(data => {
-        currentUser = data.user;
-        showMainContent();
-        initWebSocket();
-        loadPosts();
-    })
-    .catch(error => {
-        alert('Login failed. Please check your credentials and try again.');
-        console.error('Login error:', error);
-    });
+    api.post('/api/login', { login, password })
+        .then(data => {
+            currentUser = data.user;
+            showMainContent();
+            initWebSocket();
+            loadPosts();
+            notifications.success('Login successful!');
+        })
+        .catch(error => {
+            if (error.message !== 'Session expired') {
+                notifications.error('Login failed: ' + error.message);
+                console.error('Login error:', error);
+            }
+        });
 }
 
 function handleRegister(e) {
@@ -159,30 +145,20 @@ function handleRegister(e) {
         password: form.password.value
     };
 
-    fetch('/api/register', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Registration failed');
-        }
-    })
-    .then(data => {
-        currentUser = data.user;
-        showMainContent();
-        initWebSocket();
-        loadPosts();
-    })
-    .catch(error => {
-        alert('Registration failed. Please try again with different information.');
-        console.error('Registration error:', error);
-    });
+    api.post('/api/register', userData)
+        .then(data => {
+            currentUser = data.user;
+            showMainContent();
+            initWebSocket();
+            loadPosts();
+            notifications.success('Registration successful!');
+        })
+        .catch(error => {
+            if (error.message !== 'Session expired') {
+                notifications.error('Registration failed: ' + error.message);
+                console.error('Registration error:', error);
+            }
+        });
 }
 
 function logout() {
@@ -200,6 +176,7 @@ function logout() {
     }
     
     if (socket) {
+        window.wsState.intentionalDisconnect = true;
         socket.close();
         socket = null;
     }
@@ -209,17 +186,12 @@ function logout() {
     showLoginForm();
     
     if (wasLoggedIn) {
-        fetch('/api/logout', {
-            method: 'POST',
-        })
-        .then(response => {
-            if (!response.ok) {
-                console.warn('Server logout failed, but local state was cleared');
-            }
-        })
-        .catch(error => {
-            console.error('Logout error:', error);
-        });
+        api.post('/api/logout')
+            .catch(error => {
+                if (error.message !== 'Session expired') {
+                    console.error('Logout error:', error);
+                }
+            });
     }
 }
 

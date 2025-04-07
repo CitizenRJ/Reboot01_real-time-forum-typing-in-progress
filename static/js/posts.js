@@ -6,17 +6,7 @@ function loadPosts() {
         return;
     }
     
-    fetch('/api/posts')
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 401) {
-                    handleSessionExpired();
-                    throw new Error('Session expired');
-                }
-                throw new Error(`Failed to load posts: ${response.status}`);
-            }
-            return response.json();
-        })
+    api.get('/api/posts')
         .then(data => {
             console.log(`Received ${data.posts ? data.posts.length : 0} posts`);
             displayPosts(data.posts || []);
@@ -24,7 +14,7 @@ function loadPosts() {
         .catch(error => {
             if (error.message !== 'Session expired') {
                 console.error('Error loading posts:', error);
-                alert('Failed to load posts. Please try again.');
+                notifications.error('Failed to load posts: ' + error.message);
             }
         });
 }
@@ -83,40 +73,50 @@ function handleCreatePost(e) {
     console.log('Creating new post');
     
     const form = e.target;
+    const title = form.title.value.trim();
+    const content = form.content.value.trim();
+    const category = form.category.value;
+    
+    if (!title) {
+        notifications.error('Title cannot be empty');
+        return;
+    }
+    
+    if (!content) {
+        notifications.error('Content cannot be empty');
+        return;
+    }
+    
+    if (!category) {
+        notifications.error('Please select a category');
+        return;
+    }
+    
     const postData = {
-        title: form.title.value,
-        content: form.content.value,
-        category: form.category.value
+        title: title,
+        content: content,
+        category: category
     };
     
-    fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(postData),
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Failed to create post');
-        }
-    })
-    .then(data => {
-        console.log('Post created successfully');
-        form.reset();
-        
-        showSection('posts-container');
-        
-        setTimeout(() => {
-            loadPosts();
-        }, 50);
-    })
-    .catch(error => {
-        console.error('Post creation error:', error);
-        alert('Failed to create post. Please try again.');
-    });
+    api.post('/api/posts', postData)
+        .then(data => {
+            console.log('Post created successfully');
+            form.reset();
+            
+            showSection('posts-container');
+            
+            setTimeout(() => {
+                loadPosts();
+            }, 50);
+            
+            notifications.success('Post created successfully!');
+        })
+        .catch(error => {
+            if (error.message !== 'Session expired') {
+                console.error('Post creation error:', error);
+                notifications.error('Failed to create post: ' + error.message);
+            }
+        });
 }
 
 function viewPost(postId) {
@@ -124,14 +124,7 @@ function viewPost(postId) {
     
     showSection('post-detail-container');
     
-    fetch(`/api/posts/${postId}`)
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error(`Failed to load post: ${response.status}`);
-            }
-        })
+    api.get(`/api/posts/${postId}`)
         .then(data => {
             console.log('Post detail response:', data);
             console.log('Comments in response:', data.comments);
@@ -142,45 +135,36 @@ function viewPost(postId) {
             displayPostDetail(data.post, data.comments || []);
         })
         .catch(error => {
-            console.error('Error loading post details:', error);
-            alert('Failed to load post details. Please try again.');
+            if (error.message !== 'Session expired') {
+                console.error('Error loading post details:', error);
+                alert('Failed to load post details. Please try again.');
+            }
         });
 }
 
 function handleAddComment(postId, commentText) {
     if (!commentText.trim()) {
-        alert('Comment cannot be empty');
+        notifications.error('Comment cannot be empty');
         return;
     }
     
-    fetch('/api/comments', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            postId: postId,
-            content: commentText
-        }),
+    api.post('/api/comments', {
+        postId: postId,
+        content: commentText
     })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('Failed to add comment');
-        }
-    })
-    .then(data => {
-        console.log('Comment added successfully');
-        
-        document.getElementById('comment-form').reset();
-        
-        viewPost(postId);
-    })
-    .catch(error => {
-        console.error('Comment error:', error);
-        alert('Failed to add comment. Please try again.');
-    });
+        .then(data => {
+            console.log('Comment added successfully');
+            
+            document.getElementById('comment-form').reset();
+            
+            viewPost(postId);
+        })
+        .catch(error => {
+            if (error.message !== 'Session expired') {
+                console.error('Comment error:', error);
+                notifications.error('Failed to add comment. Please try again.');
+            }
+        });
 }
 
 function displayPostDetail(post, comments = []) {
@@ -236,18 +220,4 @@ function displayPostDetail(post, comments = []) {
         e.preventDefault();
         handleAddComment(post.id, e.target.comment.value);
     });
-}
-function showSection(sectionId) {
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.add('hidden');
-    });
-    
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.classList.remove('hidden');
-    } else {
-        console.error(`Section with ID ${sectionId} not found`);
-    }
-    
-    return new Promise(resolve => setTimeout(resolve, 10));
 }

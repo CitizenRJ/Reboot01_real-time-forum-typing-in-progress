@@ -3,6 +3,7 @@ package handlers
 import (
 	"RTF/internal/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -66,10 +67,18 @@ func GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = models.MarkMessagesAsRead(otherUserID, user.ID)
-	if err != nil {
-		http.Error(w, "Failed to mark messages as read", http.StatusInternalServerError)
-		return
+	var messageIDs []int
+	for _, msg := range messages {
+		if msg.SenderID == otherUserID && !msg.Read {
+			messageIDs = append(messageIDs, msg.ID)
+		}
+	}
+
+	if len(messageIDs) > 0 {
+		err = models.MarkMessagesAsRead(messageIDs)
+		if err != nil {
+			log.Printf("Failed to mark messages as read: %v", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

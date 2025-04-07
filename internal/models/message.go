@@ -2,6 +2,7 @@ package models
 
 import (
 	"RTF/internal/database"
+	"strings"
 	"time"
 )
 
@@ -58,12 +59,21 @@ func GetMessagesBetweenUsers(userID1, userID2 int, limit, offset int) ([]Message
 	return messages, nil
 }
 
-func MarkMessagesAsRead(senderID, receiverID int) error {
-	_, err := database.DB.Exec(`
-		UPDATE messages 
-		SET read = 1 
-		WHERE sender_id = ? AND receiver_id = ? AND read = 0
-	`, senderID, receiverID)
+func MarkMessagesAsRead(messageIDs []int) error {
+	if len(messageIDs) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(messageIDs))
+	args := make([]interface{}, len(messageIDs))
+
+	for i, id := range messageIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := "UPDATE messages SET read = 1 WHERE id IN (" + strings.Join(placeholders, ",") + ") AND read = 0"
+	_, err := database.DB.Exec(query, args...)
 	return err
 }
 

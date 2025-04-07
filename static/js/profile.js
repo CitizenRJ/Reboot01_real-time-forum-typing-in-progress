@@ -38,19 +38,25 @@ function loadUserProfile() {
         document.getElementById('profile-avatar-img').src = `/uploads/avatars/${currentUser.avatar}`;
     }
     
-    fetch(`/api/posts?userId=${currentUser.id}`)
-        .then(response => response.json())
-        .then(data => {
-            displayProfilePosts(data.posts || []);
-        })
-        .catch(error => console.error('Error loading user posts:', error));
-    
-    fetch(`/api/comments?userId=${currentUser.id}`)
-        .then(response => response.json())
-        .then(data => {
-            displayProfileComments(data.comments || []);
-        })
-        .catch(error => console.error('Error loading user comments:', error));
+    api.get(`/api/posts?userId=${currentUser.id}`)
+    .then(data => {
+        displayProfilePosts(data.posts || []);
+    })
+    .catch(error => {
+        if (error.message !== 'Session expired') {
+            console.error('Error loading user posts:', error);
+        }
+    });
+
+api.get(`/api/comments?userId=${currentUser.id}`)
+    .then(data => {
+        displayProfileComments(data.comments || []);
+    })
+    .catch(error => {
+        if (error.message !== 'Session expired') {
+            console.error('Error loading user comments:', error);
+        }
+    });
 }
 
 function displayProfilePosts(posts) {
@@ -145,7 +151,7 @@ function uploadAvatar() {
     const file = fileInput.files[0];
     
     if (!file) {
-        alert('Please select a file');
+        notifications.warning('Please select a file');
         return;
     }
     
@@ -153,30 +159,22 @@ function uploadAvatar() {
         const formData = new FormData();
         formData.append('avatar', blob, 'avatar.jpg');
         
-        fetch('/api/users/avatar', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error('Failed to upload avatar');
-            }
-        })
-        .then(data => {
-            document.getElementById('profile-avatar-img').src = `/uploads/avatars/${data.avatar}`;
-            
-            document.getElementById('avatar-upload-form').classList.add('hidden');
-            document.getElementById('change-avatar-btn').classList.remove('hidden');
-            
-            currentUser.avatar = data.avatar;
-            
-            alert('Avatar uploaded successfully');
-        })
-        .catch(error => {
-            console.error('Error uploading avatar:', error);
-            alert('Failed to upload avatar. Please try again.');
-        });
+        api.postForm('/api/users/avatar', formData)
+            .then(data => {
+                document.getElementById('profile-avatar-img').src = `/uploads/avatars/${data.avatar}`;
+                
+                document.getElementById('avatar-upload-form').classList.add('hidden');
+                document.getElementById('change-avatar-btn').classList.remove('hidden');
+                
+                currentUser.avatar = data.avatar;
+                
+                notifications.success('Avatar uploaded successfully');
+            })
+            .catch(error => {
+                if (error.message !== 'Session expired') {
+                    console.error('Error uploading avatar:', error);
+                    notifications.error('Failed to upload avatar: ' + error.message);
+                }
+            });
     });
 }

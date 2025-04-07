@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time Forum</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
+    <noscript>
+        <div class="noscript-warning">
+        </div>
+    </noscript>
     <div id="app">
         <!-- Content will be dynamically loaded here -->
         <div id="auth-container" class="container">
@@ -14,9 +18,6 @@
         </div>
         
         <div id="main-container" class="container hidden">
-            <div id="post-detail-container" class="content-section hidden">
-                <div id="post-detail"></div>
-            </div>
             <header>
                 <h1>Real-Time Forum</h1>
                 <div id="user-info"></div>
@@ -31,14 +32,18 @@
             <div class="content-wrapper">
                 <div id="chat-sidebar">
                     <h3>Online Users</h3>
-                    <div id="online-users-list"></div>
+                    <div id="online-users-list" class="users-list"></div>
+                    <h3>Offline Users</h3>
+                    <div id="offline-users-list" class="users-list"></div>
                     <h3>Conversations</h3>
                     <div id="conversations-list"></div>
                 </div>
                 
                 <div id="content-area">
                     <div id="posts-container" class="content-section"></div>
-                    <div id="post-detail-container" class="content-section hidden"></div>
+                    <div id="post-detail-container" class="content-section hidden">
+                        <div id="post-detail"></div>
+                    </div>
                     <div id="create-post-container" class="content-section hidden">
                         <h2>Create New Post</h2>
                         <form id="create-post-form">
@@ -74,7 +79,7 @@
                         <div id="profile-content">
                             <div class="profile-info">
                                 <div class="profile-avatar">
-                                    <img id="profile-avatar-img" src="/img/default-avatar.png" alt="Profile Avatar">
+                                    <img id="profile-avatar-img" src="/static/img/default-avatar.png" alt="Profile Avatar">
                                     <form id="avatar-upload-form" class="hidden">
                                         <input type="file" id="avatar-file" accept="image/*">
                                         <button type="submit">Upload</button>
@@ -106,13 +111,19 @@
                 </div>
             </div>
         </div>
+        <div id="loading-overlay" class="hidden">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
     </div>
     
     <!-- Include JavaScript files -->
-    <script src="/js/auth.js"></script>
-    <script src="/js/posts.js"></script>
-    <script src="/js/chat.js"></script>
-    <script src="/js/profile.js"></script>
-    <script src="/js/main.js"></script>
+    <script src="/static/js/notification.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/posts.js"></script>
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/js/profile.js"></script>
+    <script src="/static/js/main.js"></script>
 </body>
 </html>

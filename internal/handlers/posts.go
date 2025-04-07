@@ -48,8 +48,12 @@ func HandlePosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		post.Title = strings.TrimSpace(post.Title)
+		post.Content = strings.TrimSpace(post.Content)
+		post.Category = strings.TrimSpace(post.Category)
+
 		if post.Title == "" || post.Content == "" || post.Category == "" {
-			http.Error(w, "Title, content, and category are required", http.StatusBadRequest)
+			http.Error(w, "Title, content, and category are required (cannot be empty or just whitespace)", http.StatusBadRequest)
 			return
 		}
 
